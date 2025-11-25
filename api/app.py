@@ -106,22 +106,9 @@ QUIZ_QUESTIONS = [
 ]
 
 # Root endpoint
-@app.route('/')
-def index():
-    return jsonify({
-        'success': True,
-        'message': 'Quiz Game API',
-        'version': '1.0.0',
-        'endpoints': {
-            'health': '/api/health',
-            'start_quiz': '/api/quiz/start',
-            'get_question': '/api/quiz/question/<session_id>',
-            'submit_answer': '/api/quiz/answer',
-            'get_stats': '/api/quiz/stats/<session_id>'
-        }
-    })
 
-# QUIZ GAME API ENDPOINTS
+
+QUIZ GAME API ENDPOINTS
 
 @app.route('/api/quiz/start', methods=['POST'])
 def start_quiz():
@@ -132,7 +119,7 @@ def start_quiz():
         num_questions = data.get('num_questions', 10)
         
         session_id = f"quiz_{datetime.now().timestamp()}"
-       s
+       
         questions = random.sample(QUIZ_QUESTIONS, min(num_questions, len(QUIZ_QUESTIONS)))
         
        
