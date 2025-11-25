@@ -3,13 +3,13 @@ from flask_cors import CORS
 import random
 import json
 from datetime import datetime
-import sqlite3
+
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here-change-in-production'
+
+app.secret_key = 'your-secret-key-here-change-in-production' 
 CORS(app)  # Enable Cross-Origin Resource Sharing
 
-# Quiz Questions Database (same as in the game)
 QUIZ_QUESTIONS = [
     {
         "question": "What is the capital of France?",
@@ -103,28 +103,11 @@ QUIZ_QUESTIONS = [
     }
 ]
 
-# In-memory storage for active game sessions
-game_sessions = {}
 
-# Database initialization
-def init_db():
-    conn = sqlite3.connect('gamebox.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS scores (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            game_name TEXT NOT NULL,
-            player_name TEXT,
-            score INTEGER NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    conn.commit()
-    conn.close()
 
-init_db()
 
-# ============= QUIZ GAME API ENDPOINTS =============
+
+#QUIZ GAME API ENDPOINTS
 
 @app.route('/api/quiz/start', methods=['POST'])
 def start_quiz():
@@ -159,7 +142,7 @@ def start_quiz():
         })
     
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'error': f'Failed to start quiz: {str(e)}'}), 500
 
 
 @app.route('/api/quiz/question/<session_id>', methods=['GET'])
@@ -194,7 +177,7 @@ def get_question(session_id):
         })
     
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'error': f'Failed to load question: {str(e)}'}), 500
 
 
 @app.route('/api/quiz/answer', methods=['POST'])
@@ -237,9 +220,9 @@ def submit_answer():
             'quiz_complete': is_complete
         }
         
-        # If quiz is complete, save score
+        # If quiz is complete, prepare final stats
         if is_complete:
-            save_score('Quiz Game', session_data['player_name'], session_data['score'])
+            # save_score('Quiz Game', session_data['player_name'], session_data['score']) # COMMENTED OUT
             response_data['final_score'] = session_data['score']
             response_data['correct_answers'] = session_data['correct_answers']
             response_data['total_questions'] = len(session_data['questions'])
@@ -248,7 +231,7 @@ def submit_answer():
         return jsonify(response_data)
     
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'error': f'Failed to submit answer: {str(e)}'}), 500
 
 
 @app.route('/api/quiz/stats/<session_id>', methods=['GET'])
@@ -266,89 +249,13 @@ def get_quiz_stats(session_id):
             'correct_answers': session_data['correct_answers'],
             'total_questions': len(session_data['questions']),
             'current_question': session_data['current_question'],
-            'percentage': (session_data['correct_answers'] / len(session_data['questions'])) * 100 if session_data['current_question'] > 0 else 0
+            'percentage': (session_data['correct_answers'] / len(session_data['questions'])) * 100 if len(session_data['questions']) > 0 else 0
         })
     
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'error': f'Failed to get stats: {str(e)}'}), 500
 
 
-# ============= GENERAL GAME API ENDPOINTS =============
-
-@app.route('/api/games', methods=['GET'])
-def get_games():
-    """Get list of available games"""
-    games = [
-        {
-            'id': 'flappy-bird',
-            'name': 'Flappy Bird',
-            'description': 'Navigate through pipes by tapping to fly',
-            'icon': '🐦'
-        },
-        {
-            'id': 'quiz',
-            'name': 'Quiz Game',
-            'description': 'Test your knowledge with trivia questions',
-            'icon': '❓'
-        },
-        {
-            'id': 'snake',
-            'name': 'Snake Game',
-            'description': 'Eat food and grow longer without hitting walls',
-            'icon': '🐍'
-        }
-    ]
-    return jsonify({'success': True, 'games': games})
-
-
-@app.route('/api/scores/<game_name>', methods=['GET'])
-def get_high_scores(game_name):
-    """Get high scores for a specific game"""
-    try:
-        conn = sqlite3.connect('gamebox.db')
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT player_name, score, timestamp 
-            FROM scores 
-            WHERE game_name = ? 
-            ORDER BY score DESC 
-            LIMIT 10
-        ''', (game_name,))
-        
-        scores = []
-        for row in cursor.fetchall():
-            scores.append({
-                'player_name': row[0],
-                'score': row[1],
-                'timestamp': row[2]
-            })
-        
-        conn.close()
-        
-        return jsonify({'success': True, 'scores': scores})
-    
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-def save_score(game_name, player_name, score):
-    """Save a score to the database"""
-    try:
-        conn = sqlite3.connect('gamebox.db')
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            INSERT INTO scores (game_name, player_name, score) 
-            VALUES (?, ?, ?)
-        ''', (game_name, player_name or 'Anonymous', score))
-        
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        print(f"Error saving score: {e}")
-        return False
 
 
 @app.route('/api/health', methods=['GET'])
@@ -356,12 +263,11 @@ def health_check():
     """Health check endpoint"""
     return jsonify({
         'success': True,
-        'message': 'Game Box API is running',
+        'message': 'Quiz API is running successfully',
         'timestamp': datetime.now().isoformat()
     })
 
 
-# ============= ERROR HANDLERS =============
 
 @app.errorhandler(404)
 def not_found(error):
@@ -374,15 +280,5 @@ def internal_error(error):
 
 
 if __name__ == '__main__':
-    print("🎮 Game Box API Server Starting...")
-    print("📡 Available endpoints:")
-    print("   POST /api/quiz/start - Start a new quiz")
-    print("   GET  /api/quiz/question/<session_id> - Get current question")
-    print("   POST /api/quiz/answer - Submit an answer")
-    print("   GET  /api/quiz/stats/<session_id> - Get quiz statistics")
-    print("   GET  /api/games - List all games")
-    print("   GET  /api/scores/<game_name> - Get high scores")
-    print("   GET  /api/health - Health check")
-    print("\n🚀 Server running on http://localhost:5000")
-    
+    # Only run this locally; Vercel uses the 'app' callable directly.
     app.run(debug=True, host='0.0.0.0', port=5000)
