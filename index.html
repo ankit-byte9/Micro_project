@@ -359,15 +359,14 @@
     </div>
 
     <script>
-        // Configuration
+       
         const API_BASE_URL = '/api';
         
-        // Game state
+     
         let sessionId = null;
         let currentQuestionData = null;
         let isAnswered = false;
 
-        // Show/Hide screens
         function showScreen(screenId) {
             const screens = ['startScreen', 'gameScreen', 'resultsScreen', 'loadingScreen', 'errorScreen'];
             screens.forEach(id => {
@@ -376,7 +375,7 @@
             document.getElementById(screenId).classList.remove('hidden');
         }
 
-        // Start a new quiz
+      
         async function startQuiz() {
             const playerName = document.getElementById('playerName').value.trim() || 'Anonymous';
             
@@ -405,11 +404,11 @@
                 }
             } catch (error) {
                 console.error('Error starting quiz:', error);
-                showError('Unable to connect to server. Make sure the Flask backend is running.');
+                showError('Could not communicate with the API. Check Vercel logs for function crash.');
             }
         }
 
-        // Load the current question
+      
         async function loadQuestion() {
             try {
                 const response = await fetch(`${API_BASE_URL}/quiz/question/${sessionId}`);
@@ -424,14 +423,14 @@
                     currentQuestionData = data;
                     isAnswered = false;
                     
-                    // Update UI
+                   
                     document.getElementById('questionNumber').textContent = data.question_number;
                     document.getElementById('category').textContent = data.category;
                     document.getElementById('questionText').textContent = data.question;
                     document.getElementById('currentScore').textContent = data.score;
                     document.getElementById('feedbackContainer').innerHTML = '';
 
-                    // Display options
+                   
                     displayOptions(data.options);
                     
                     showScreen('gameScreen');
@@ -440,11 +439,11 @@
                 }
             } catch (error) {
                 console.error('Error loading question:', error);
-                showError('Failed to load question');
+                showError('Failed to load question.');
             }
         }
 
-        // Display answer options
+     
         function displayOptions(options) {
             const container = document.getElementById('optionsContainer');
             container.innerHTML = '';
@@ -458,14 +457,12 @@
             });
         }
 
-        // Handle answer selection
         async function selectAnswer(selectedIndex) {
             if (isAnswered) return;
 
             isAnswered = true;
             const options = document.querySelectorAll('.option');
             
-            // Disable all options
             options.forEach(opt => opt.classList.add('disabled'));
 
             try {
@@ -483,17 +480,16 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    // Show visual feedback
+                   
                     options[data.correct_answer].classList.add('correct');
                     
                     if (!data.is_correct) {
                         options[selectedIndex].classList.add('incorrect');
                     }
 
-                    // Update score
+                    
                     document.getElementById('currentScore').textContent = data.current_score;
 
-                    // Show feedback message
                     const feedbackDiv = document.createElement('div');
                     feedbackDiv.className = `feedback ${data.is_correct ? 'correct' : 'incorrect'}`;
                     feedbackDiv.textContent = data.is_correct 
@@ -501,7 +497,6 @@
                         : `✗ Wrong! Correct answer: ${data.explanation}`;
                     document.getElementById('feedbackContainer').appendChild(feedbackDiv);
 
-                    // Move to next question or show results
                     if (data.quiz_complete) {
                         setTimeout(() => showResults(data), 2500);
                     } else {
@@ -512,14 +507,12 @@
                 }
             } catch (error) {
                 console.error('Error submitting answer:', error);
-                showError('Failed to submit answer');
+                showError('Failed to submit answer.');
             }
         }
 
-        // Show results screen
         async function showResults(finalData = null) {
             if (!finalData) {
-                // Fetch final stats if not provided
                 try {
                     const response = await fetch(`${API_BASE_URL}/quiz/stats/${sessionId}`);
                     finalData = await response.json();
@@ -534,7 +527,6 @@
                 const percentage = finalData.percentage || 0;
                 document.getElementById('percentage').textContent = `${percentage.toFixed(1)}% Correct`;
 
-                // Performance message
                 const messageDiv = document.getElementById('performanceMessage');
                 if (percentage >= 80) {
                     messageDiv.textContent = '🌟 Excellent! You\'re a quiz master!';
@@ -551,7 +543,6 @@
             showScreen('resultsScreen');
         }
 
-        // Restart quiz
         function restartQuiz() {
             sessionId = null;
             currentQuestionData = null;
@@ -560,33 +551,29 @@
             showScreen('startScreen');
         }
 
-        // Go to main menu (placeholder)
+        
         function goToMainMenu() {
-            alert('This would navigate to the main game selection menu');
-            // In the actual implementation, this would redirect to index.html or main menu
-            window.location.href = 'index.html';
+          
+            window.location.href = '/';
         }
 
-        // Show error message
+      
         function showError(message) {
             document.getElementById('errorMessage').textContent = message;
             showScreen('errorScreen');
         }
 
-        // Test API connection on page load
-       // Test API connection on page load
-            window.onload = async function() {
-        try {
-            // Fetch request now goes to /api/health on the same Vercel domain
-            const response = await fetch(`${API_BASE_URL}/health`);
-            const data = await response.json();
-            if (!data.success) {
-                console.warn('API health check failed');
+        window.onload = async function() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                if (!data.success) {
+                    console.warn('API health check failed');
+                }
+            } catch (error) {
+                console.error('Cannot connect to API:', error);
             }
-        } catch (error) {
-            console.error('Cannot connect to API:', error);
-        }
-    };
+        };
     </script>
 </body>
 </html>
