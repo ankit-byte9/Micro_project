@@ -360,7 +360,7 @@
 
     <script>
         // Configuration
-        const API_BASE_URL = 'http://localhost:5000/api';
+        const API_BASE_URL = '/api';
         
         // Game state
         let sessionId = null;
@@ -574,17 +574,19 @@
         }
 
         // Test API connection on page load
-        window.onload = async function() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/health`);
-                const data = await response.json();
-                if (!data.success) {
-                    console.warn('API health check failed');
-                }
-            } catch (error) {
-                console.error('Cannot connect to API:', error);
+       // Test API connection on page load
+            window.onload = async function() {
+        try {
+            // Fetch request now goes to /api/health on the same Vercel domain
+            const response = await fetch(`${API_BASE_URL}/health`);
+            const data = await response.json();
+            if (!data.success) {
+                console.warn('API health check failed');
             }
-        };
+        } catch (error) {
+            console.error('Cannot connect to API:', error);
+        }
+    };
     </script>
 </body>
 </html>
