@@ -1,14 +1,16 @@
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import random
-import json
 from datetime import datetime
-
+import os
 
 app = Flask(__name__)
 
-app.secret_key = 'your-secret-key-here-change-in-production' 
-CORS(app)  # Enable Cross-Origin Resource Sharing
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-in-production')
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+
+game_sessions = {}
 
 QUIZ_QUESTIONS = [
     {
@@ -103,11 +105,23 @@ QUIZ_QUESTIONS = [
     }
 ]
 
+# Root endpoint
+@app.route('/')
+def index():
+    return jsonify({
+        'success': True,
+        'message': 'Quiz Game API',
+        'version': '1.0.0',
+        'endpoints': {
+            'health': '/api/health',
+            'start_quiz': '/api/quiz/start',
+            'get_question': '/api/quiz/question/<session_id>',
+            'submit_answer': '/api/quiz/answer',
+            'get_stats': '/api/quiz/stats/<session_id>'
+        }
+    })
 
-
-
-
-#QUIZ GAME API ENDPOINTS
+# QUIZ GAME API ENDPOINTS
 
 @app.route('/api/quiz/start', methods=['POST'])
 def start_quiz():
@@ -117,13 +131,11 @@ def start_quiz():
         player_name = data.get('player_name', 'Anonymous')
         num_questions = data.get('num_questions', 10)
         
-        # Generate session ID
         session_id = f"quiz_{datetime.now().timestamp()}"
-        
-        # Select random questions
+       s
         questions = random.sample(QUIZ_QUESTIONS, min(num_questions, len(QUIZ_QUESTIONS)))
         
-        # Store session data
+       
         game_sessions[session_id] = {
             'game_type': 'quiz',
             'player_name': player_name,
@@ -164,7 +176,6 @@ def get_question(session_id):
         
         question_data = session_data['questions'][current_idx]
         
-        # Return question without the correct answer
         return jsonify({
             'success': True,
             'completed': False,
@@ -201,14 +212,14 @@ def submit_answer():
         correct_answer = question_data['correct']
         is_correct = (selected_option == correct_answer)
         
-        # Update session data
+    
         if is_correct:
             session_data['score'] += 10
             session_data['correct_answers'] += 1
         
         session_data['current_question'] += 1
         
-        # Check if quiz is complete
+        
         is_complete = session_data['current_question'] >= len(session_data['questions'])
         
         response_data = {
@@ -220,9 +231,8 @@ def submit_answer():
             'quiz_complete': is_complete
         }
         
-        # If quiz is complete, prepare final stats
+      
         if is_complete:
-            # save_score('Quiz Game', session_data['player_name'], session_data['score']) # COMMENTED OUT
             response_data['final_score'] = session_data['score']
             response_data['correct_answers'] = session_data['correct_answers']
             response_data['total_questions'] = len(session_data['questions'])
@@ -256,17 +266,15 @@ def get_quiz_stats(session_id):
         return jsonify({'success': False, 'error': f'Failed to get stats: {str(e)}'}), 500
 
 
-
-
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
         'success': True,
         'message': 'Quiz API is running successfully',
+        'active_sessions': len(game_sessions),
         'timestamp': datetime.now().isoformat()
     })
-
 
 
 @app.errorhandler(404)
@@ -279,6 +287,10 @@ def internal_error(error):
     return jsonify({'success': False, 'error': 'Internal server error'}), 500
 
 
-if __name__ == '__main__':
-    # Only run this locally; Vercel uses the 'app' callable directly.
+
+if __name__ != '__main__':
+  
+    app.debug = False
+else:
+   
     app.run(debug=True, host='0.0.0.0', port=5000)
